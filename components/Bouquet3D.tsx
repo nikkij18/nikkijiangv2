@@ -32,12 +32,15 @@ const mul3 = (c: RGB, k: number): RGB => [c[0] * k, c[1] * k, c[2] * k];
 
 const RAMP = "*#%%@@";
 const ASPECT = 1.6; // character cell height / width
-const BLOOM_END = 8.5;
+const BLOOM_END = 6.2;
+const STEM_BOTTOM = -1.0; // where the cut stems end, well below the ribbon (at y = -0.24)
+const TOP = 2.4; // highest point of the bouquet
 const STEM_TIME = 1.2; // seconds for a stem to grow
-const BUD_TIME = 1.0; // seconds a bud takes to swell
-const OPEN_TIME = 3.6; // seconds for a lily to open
+const BUD_TIME = 0.45; // seconds a bud takes to swell
+const OPEN_TIME = 2.6; // seconds for a lily to open
 // When each lily starts opening (after its bud has swelled)
-const openAt = (L: { start: number }) => 2.3 + (L.start - 1) * 1.2;
+// Lilies open almost as soon as their bud has formed, in a quick ripple outward
+const openAt = (L: { start: number }, i: number) => 0.06 * i + STEM_TIME + BUD_TIME * 0.5 + (L.start - 1) * 0.5;
 
 // Lily color varieties: tepal body, tip, throat, spots
 type Variety = { body: RGB; tip: RGB; throat: RGB; spot: RGB; spots: number };
@@ -63,6 +66,30 @@ const FILAMENT: RGB = [210, 225, 170];
 const ANTHER: RGB = [150, 60, 25];
 const BUD: RGB = [170, 200, 110];
 const RIBBON: RGB = [240, 150, 192];
+
+const RIBBON_LIGHT: RGB = [252, 214, 232];
+const RIBBON_DARK: RGB = [190, 80, 135];
+const RIBBON_EDGE: RGB = [120, 30, 75];
+
+// Right-hand bow loop outline (x, y relative to the knot); mirrored for the left loop.
+// The upper-outer corner is peaked so the loops read as a bow, not a pair of circles.
+const BOW_OUTLINE: [number, number][] = [
+  [0.02, -0.02], [0.1, -0.075], [0.2, -0.07], [0.26, 0.0], [0.28, 0.1], [0.285, 0.16],
+  [0.25, 0.155], [0.16, 0.12], [0.07, 0.06],
+];
+const BOW_CENTER: [number, number] = [0.165, 0.05]; // middle of the loop's opening
+const BOW_HOLE = 0.52; // size of the opening, as a share of the loop
+function bowOutline(u: number): [number, number] {
+  // closed Catmull-Rom through BOW_OUTLINE
+  const n = BOW_OUTLINE.length;
+  const f = (u % 1) * n;
+  const i = Math.floor(f), t = f - i;
+  const P = (k: number) => BOW_OUTLINE[(k + n) % n];
+  const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+  const cr = (a: number, b: number, c: number, d: number) =>
+    0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
+  return [cr(p0[0], p1[0], p2[0], p3[0]), cr(p0[1], p1[1], p2[1], p3[1])];
+}
 
 type Lily = { at: V; axis: V; len: number; start: number; spin: number; v: Variety; bud?: boolean };
 
@@ -111,16 +138,26 @@ function basis(axis: V): [V, V] {
   return [b1, cross(a, b1)];
 }
 
+const TIE_Y = -0.24; // height of the ribbon
+const TIE_U = 0.4; // share of the stem below the ribbon
+
+// Each stem runs straight up the tied bundle to the ribbon, then curves out to its flower.
 function stemCurve(i: number, u: number) {
   const L = LILIES[i];
   const flat = Math.hypot(L.at[0], L.at[2]) || 1;
   const d: V = [L.at[0] / flat, 0, L.at[2] / flat];
-  const p0: V = [d[0] * 0.07, -0.5, d[2] * 0.07];
-  const p1: V = [d[0] * 0.05, Math.min(0.25, L.at[1] - 0.45), d[2] * 0.05];
+  const p0: V = [d[0] * 0.075, STEM_BOTTOM, d[2] * 0.075]; // cut ends splay slightly
+  const pt: V = [d[0] * 0.05, TIE_Y, d[2] * 0.05];
+  if (u <= TIE_U) {
+    const k = u / TIE_U;
+    return { p: add(p0, mul(sub(pt, p0), k)), d: norm(sub(pt, p0)) };
+  }
+  const v = (u - TIE_U) / (1 - TIE_U);
+  const p1: V = [d[0] * 0.06, Math.min(0.25, L.at[1] - 0.45), d[2] * 0.06];
   const p2 = sub(L.at, mul(norm(L.axis), 0.03));
-  const m = 1 - u;
-  const p = add(add(mul(p0, m * m), mul(p1, 2 * m * u)), mul(p2, u * u));
-  const dd = add(mul(sub(p1, p0), 2 * m), mul(sub(p2, p1), 2 * u));
+  const m = 1 - v;
+  const p = add(add(mul(pt, m * m), mul(p1, 2 * m * v)), mul(p2, v * v));
+  const dd = add(mul(sub(p1, pt), 2 * m), mul(sub(p2, p1), 2 * v));
   return { p, d: norm(dd) };
 }
 
@@ -217,28 +254,44 @@ function buildModel(t: number): Model {
   // Ribbon tied around the stem bundle: band, bow loops, and two tails
   const tie = easeOut(clamp((t - 1.0) / 1.0));
   if (tie > 0.01) {
-    const Y = -0.24;
+    const Y = TIE_Y;
     B.surface(3, 48, (u, sv) => {
       const th = sv * Math.PI * 2;
-      const r = 0.105;
+      const r = 0.1;
       return { p: [Math.cos(th) * r, Y - 0.05 + u * 0.1, Math.sin(th) * r], c: RIBBON };
     });
+    // Knot
+    B.surface(6, 16, (u, sv) => {
+      const th = sv * Math.PI * 2;
+      const r = u * tie;
+      return {
+        p: [Math.cos(th) * 0.06 * r, Y + 0.01 + Math.sin(th) * 0.065 * r, 0.2 + 0.03 * (1 - u)],
+        c: u > 0.8 ? RIBBON_EDGE : mix(RIBBON_DARK, RIBBON, 0.4),
+      };
+    });
     for (const sgn of [-1, 1]) {
-      // loop
-      B.surface(28, 3, (u, sv) => {
-        const a = u * Math.PI * 2 * tie;
-        const x = sgn * (0.13 - 0.13 * Math.cos(a)) * 1.1;
-        const y = Y + 0.09 * Math.sin(a) + 0.03;
-        const z = 0.13 + (sv - 0.5) * 0.08 + 0.02 * Math.sin(a);
-        return { p: [x, y, z], c: mix(RIBBON, [252, 214, 232], 0.15 + 0.2 * Math.sin(a)) };
+      // Loop: a hollow band of ribbon with crisp inner and outer edges and a peaked upper-outer corner
+      const c = BOW_CENTER;
+      B.surface(BOW_OUTLINE.length * 5, 6, (u, sv) => {
+        const o = bowOutline(u);
+        const k = lerp(BOW_HOLE, 1, sv); // sv = 0 is the inside edge of the loop, 1 the outside
+        const x = (c[0] + (o[0] - c[0]) * k) * tie, y = (c[1] + (o[1] - c[1]) * k) * tie;
+        const fold = Math.max(0, 1 - Math.hypot(x, y) / 0.09); // shadow where it gathers into the knot
+        let col = mix(RIBBON, RIBBON_LIGHT, clamp(y / 0.16) * 0.55);
+        col = mix(col, RIBBON_DARK, fold * 0.7);
+        if (sv > 0.8) col = RIBBON_EDGE; // outer edge
+        else if (sv < 0.2) col = mix(RIBBON_EDGE, RIBBON_DARK, 0.3); // inner edge, in the loop's shadow
+        return { p: [sgn * x, Y + y, 0.125 + 0.02 * Math.sin(Math.PI * sv) - 0.03 * (x / 0.27)], c: col };
       });
-      // tail
-      B.surface(14, 3, (u, sv) => {
+      // Tail: flat, facing out, with a V-notched end
+      B.surface(14, 4, (u, sv) => {
         const uu = u * tie;
-        const x = sgn * (0.02 + 0.12 * uu) + (sv - 0.5) * 0.07;
-        const y = Y - 0.03 - 0.3 * uu;
-        const z = 0.14 + 0.03 * Math.sin(uu * 5);
-        return { p: [x, y, z], c: mix(RIBBON, [200, 90, 140], uu * 0.5) };
+        const s2 = sv * 2 - 1;
+        const notch = u > 0.85 ? (1 - Math.abs(s2)) * 0.05 * ((u - 0.85) / 0.15) : 0;
+        const x = sgn * (0.03 + 0.11 * uu) + s2 * 0.05;
+        const y = Y - 0.04 - 0.3 * uu + notch;
+        const z = 0.125 + 0.03 * Math.sin(uu * 5);
+        return { p: [x, y, z], c: Math.abs(s2) > 0.75 ? RIBBON_EDGE : mix(RIBBON, RIBBON_DARK, uu * 0.45) };
       });
     }
   }
@@ -250,8 +303,8 @@ function buildModel(t: number): Model {
     const [B1, B2] = basis(A);
     // Bud stage: a closed green bud swells and blushes, then the tepals open
     const swell = easeInOut(clamp((t - (0.06 * i + STEM_TIME)) / BUD_TIME));
-    const b = L.bud ? 0 : easeInOut(clamp((t - openAt(L)) / OPEN_TIME));
-    const green = L.bud ? 1 : 1 - clamp(b / 0.45); // how bud-like the coloring still is
+    const b = L.bud ? 0 : easeOut(clamp((t - openAt(L, i)) / OPEN_TIME)); // fast start: little time spent closed
+    const green = L.bud ? 1 : 1 - clamp(b / 0.22); // how bud-like the coloring still is
     const v = L.v;
 
     // Opening: tepals flare from the throat, then curve back at the tips
@@ -341,8 +394,30 @@ function buildModel(t: number): Model {
   return B.done();
 }
 
-export default function Bouquet3D({ className }: { className?: string }) {
+// Widest horizontal reach of the full bouquet from its spin axis, in model units.
+// The bouquet only spins about the vertical axis, so this bounds its silhouette at every angle.
+let reachCache = 0;
+function bouquetReach() {
+  if (reachCache) return reachCache;
+  const m = buildModel(BLOOM_END);
+  for (const arr of [m.pos, m.sPos])
+    for (let i = 0; i < arr.length; i += 3) reachCache = Math.max(reachCache, Math.hypot(arr[i], arr[i + 2]));
+  return reachCache;
+}
+
+export default function Bouquet3D({
+  className,
+  onReach,
+}: {
+  className?: string;
+  /** Called with the bouquet's widest half-width in CSS pixels, whenever the canvas is laid out. */
+  onReach?: (px: number) => void;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const onReachRef = useRef(onReach);
+  useEffect(() => {
+    onReachRef.current = onReach;
+  });
 
   useEffect(() => {
     const canvas = ref.current;
@@ -377,14 +452,15 @@ export default function Bouquet3D({ className }: { className?: string }) {
       font = cw / 0.56;
       cols = Math.floor(W / cw);
       rows = Math.floor(H / ch);
-      // Bouquet spans about x ±1.4 and y -0.5..2.4
-      S = Math.min(cols / 2.75, (rows * ASPECT) / 2.8);
+      // Bouquet spans about x ±1.4 and y STEM_BOTTOM..TOP
+      S = Math.min(cols / 2.75, (rows * ASPECT) / (TOP - STEM_BOTTOM + 0.05));
       cx = cols / 2;
       cy = rows / 2;
       zbuf = new Float32Array(cols * rows);
       glyph = new Uint8Array(cols * rows);
       rgb = new Uint8Array(cols * rows * 3);
       filled = new Uint8Array(cols * rows);
+      onReachRef.current?.(bouquetReach() * S * cw);
     }
 
     function shade(idx: number, z: number, ndl: number, r: number, g: number, b: number) {
@@ -398,16 +474,16 @@ export default function Bouquet3D({ className }: { className?: string }) {
       filled[idx] = 1;
     }
 
-    function render(t: number, angle: number) {
+    function render(t: number, angle: number, tiltDeg: number) {
       const m = t >= BLOOM_END ? (cached ??= buildModel(BLOOM_END)) : buildModel(t);
       zbuf.fill(-1e9);
       filled.fill(0);
 
       const cosA = Math.cos(angle), sinA = Math.sin(angle);
-      const tilt = deg(-18);
+      const tilt = deg(tiltDeg);
       const cosT = Math.cos(tilt), sinT = Math.sin(tilt);
       const D = 6;
-      const yc = 0.95;
+      const yc = (TOP + STEM_BOTTOM) / 2;
 
       // Transform vertices: camera space (cxs, cys, czs) and screen (sx, sy, sz)
       const nv = m.pos.length / 3;
@@ -436,10 +512,10 @@ export default function Bouquet3D({ className }: { className?: string }) {
         const ax = sx[a], ay = sy[a], bx = sx[b], by = sy[b], qx = sx[c], qy = sy[c];
         const area = (bx - ax) * (qy - ay) - (by - ay) * (qx - ax);
         if (Math.abs(area) < 1e-6) continue;
-        let minX = Math.max(0, Math.floor(Math.min(ax, bx, qx)));
-        let maxX = Math.min(cols - 1, Math.ceil(Math.max(ax, bx, qx)));
-        let minY = Math.max(0, Math.floor(Math.min(ay, by, qy)));
-        let maxY = Math.min(rows - 1, Math.ceil(Math.max(ay, by, qy)));
+        const minX = Math.max(0, Math.floor(Math.min(ax, bx, qx)));
+        const maxX = Math.min(cols - 1, Math.ceil(Math.max(ax, bx, qx)));
+        const minY = Math.max(0, Math.floor(Math.min(ay, by, qy)));
+        const maxY = Math.min(rows - 1, Math.ceil(Math.max(ay, by, qy)));
         if (minX > maxX || minY > maxY) continue;
 
         // flat normal in camera space, two-sided
@@ -494,6 +570,16 @@ export default function Bouquet3D({ className }: { className?: string }) {
       }
 
       ctx!.clearRect(0, 0, W, H);
+      // Opaque backing behind every drawn cell, so the bouquet hides what's behind it (the name)
+      ctx!.fillStyle = "#000";
+      for (let idx = 0; idx < filled.length; idx++) {
+        if (!filled[idx]) continue;
+        const q = idx % cols, row = (idx / cols) | 0;
+        let run = 1;
+        while (q + run < cols && filled[idx + run]) run++;
+        ctx!.fillRect(q * cw - 0.5, row * ch - 0.5, run * cw + 1, ch + 1);
+        idx += run - 1;
+      }
       ctx!.font = `bold ${font}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
       ctx!.textAlign = "center";
       ctx!.textBaseline = "middle";
@@ -516,25 +602,73 @@ export default function Bouquet3D({ className }: { className?: string }) {
       }
     }
 
+    // Rotation: spins on its own, and can be grabbed and turned (with momentum) or tilted.
+    const BASE_TILT = -18;
+    const autoVel = reduce ? 0 : 0.12; // rad/s
+    let angle = 0.3, vel = autoVel, tilt = BASE_TILT;
+    let dragging = false, lastX = 0, lastY = 0, lastMove = 0;
+    let prev = 0;
+
     function frame(now: number) {
-      if (!start) start = now;
-      const t = (now - start) / 1000;
-      render(t, 0.3 + t * 0.12);
+      if (!start) start = prev = now;
+      const dt = Math.min(0.05, (now - prev) / 1000);
+      prev = now;
+      const t = reduce ? BLOOM_END : (now - start) / 1000;
+      if (!dragging) {
+        angle += vel * dt;
+        vel += (autoVel - vel) * (1 - Math.exp(-dt * 1.6)); // momentum eases back to the idle spin
+        tilt += (BASE_TILT - tilt) * (1 - Math.exp(-dt * 3)); // tilt springs back
+      }
+      render(t, angle, tilt);
       raf = requestAnimationFrame(frame);
     }
 
-    layout();
-    if (reduce) render(BLOOM_END, 0.3);
-    else raf = requestAnimationFrame(frame);
+    const onDown = (e: PointerEvent) => {
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMove = performance.now();
+      vel = 0;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.classList.add("is-grabbing");
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      const now = performance.now();
+      const dt = Math.max(0.008, (now - lastMove) / 1000);
+      const da = (e.clientX - lastX) * 0.012;
+      angle += da;
+      vel = vel * 0.5 + (da / dt) * 0.5;
+      tilt = clamp(tilt - (e.clientY - lastY) * 0.25, -60, 25);
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastMove = now;
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!dragging) return;
+      dragging = false;
+      if (performance.now() - lastMove > 80) vel = 0; // released after holding still: no fling
+      vel = clamp(vel, -9, 9);
+      canvas.releasePointerCapture?.(e.pointerId);
+      canvas.classList.remove("is-grabbing");
+    };
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
 
-    const ro = new ResizeObserver(() => {
-      layout();
-      if (reduce) render(BLOOM_END, 0.3);
-    });
+    layout();
+    raf = requestAnimationFrame(frame);
+
+    const ro = new ResizeObserver(() => layout());
     ro.observe(canvas);
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
     };
   }, []);
 

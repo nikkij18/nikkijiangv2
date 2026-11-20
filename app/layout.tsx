@@ -5,7 +5,7 @@ import "./globals.css";
 
 const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", axes: ["opsz", "wdth"] });
 const serif = Instrument_Serif({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-serif" });
-const simple = Geist({ subsets: ["latin"], weight: "500", variable: "--font-simple" });
+const simple = Geist({ subsets: ["latin", "latin-ext"], weight: "500", variable: "--font-simple" }); // latin-ext: dotless ı in the home name
 const mono = Cutive_Mono({ weight: "400", subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
