@@ -5,7 +5,7 @@
   --blackberry: #5b3758;
   --steel: #0582ca;
   --gold: #f39f2b;
-  --apricot: #eea25a; /* soft orange: the bouncing dot, and the About page it opens into */
+  --apricot: #eea25a; /* soft orange: the bouncing dot, which swells into the transition to About */
 
   /* Rooms */
   --paper: #fdf3f3;
@@ -14,8 +14,7 @@
   --night: #000000;
 
   --ink: var(--blackberry);
-  --f-display: var(--font-display), "Helvetica Neue", Arial, sans-serif;
-  --f-serif: var(--font-serif), Georgia, serif;
+  --f-display: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   --f-mono: var(--font-mono), ui-monospace, Menlo, monospace;
 
   --pad: clamp(16px, 2.4vw, 40px);
@@ -108,7 +107,7 @@ button { font: inherit; color: inherit; }
 .home-name {
   position: absolute; inset: 0; z-index: 0; margin: 0;
   color: var(--blossom);
-  font-family: var(--font-simple), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--f-display);
   font-weight: 500; font-size: var(--name-size, 120px);
   line-height: 1; letter-spacing: -0.03em;
   white-space: nowrap;
@@ -162,6 +161,16 @@ button { font: inherit; color: inherit; }
   56% { translate: 0 calc(var(--dot-apex, -40px) * 0.1); scale: var(--k) var(--k); animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1); }
   100% { translate: 0 var(--dot-apex, -40px); scale: var(--k) var(--k); }
 }
+/* Small, light location line under "Jiang". Rides along with the word as it splits, and fades in once
+   the words have settled */
+.home-cap {
+  position: absolute; top: calc(100% + 0.9rem); right: var(--cap-in, 0px); text-align: right;
+  font-weight: 300; font-size: clamp(0.85rem, calc(var(--name-size, 120px) * 0.105), 1.35rem);
+  letter-spacing: 0.16em; margin-right: -0.16em; /* tracking adds space after the last letter; keep the ink flush with the "g" */
+  line-height: 1.25; color: var(--blossom);
+  opacity: 0; transition: opacity 0.9s var(--ease);
+}
+.is-settled .home-cap { opacity: 1; transition-delay: 1.5s; }
 @keyframes name-in { from { opacity: 0; filter: blur(8px); } }
 
 .home-stage { position: absolute; inset: 0; z-index: 1; display: flex; justify-content: center; pointer-events: none; translate: var(--bq-shift, 0px) 0; }
@@ -204,7 +213,7 @@ button { font: inherit; color: inherit; }
 .card-file::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
 .work-card { padding: clamp(1.2rem, 3vh, 2rem) clamp(1.2rem, 2.4vw, 2.2rem); transform: rotate(-0.8deg); animation: deal 0.5s var(--ease) both; }
 .work-card h2 { margin-top: 0.8rem; font-weight: 800; font-size: clamp(1.5rem, 2.2vw, 2.3rem); letter-spacing: -0.03em; line-height: 1.05; }
-.work-kind { font-family: var(--f-serif); font-style: italic; font-size: 1.25rem; margin-top: 0.2rem; }
+.work-kind { font-weight: 300; font-size: 1.25rem; margin-top: 0.2rem; }
 .work-roles { list-style: none; padding: 0; margin: 1rem 0; border-top: 1px dashed var(--ink); }
 .work-roles li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border-bottom: 1px dashed var(--ink); font-weight: 600; }
 .work-roles .mono { font-weight: 400; white-space: nowrap; }
@@ -212,7 +221,7 @@ button { font: inherit; color: inherit; }
 .work-points li + li { margin-top: 0.45rem; }
 .work-points li::marker { color: var(--steel); }
 @keyframes deal { from { opacity: 0; transform: rotate(-3deg) translateY(16px); } }
-@media (prefers-reduced-motion: reduce) { .work-card, .proj-stage, .about-panel { animation: none !important; } .work-org-name { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .work-card, .proj-stage { animation: none !important; } .work-org-name { transition: none; } }
 
 /* Projects */
 .page--projects { background: var(--sprout); }
@@ -222,7 +231,7 @@ button { font: inherit; color: inherit; }
 .proj-kind { font-size: 0.95rem; }
 .proj-text h2 { margin-top: 0.4rem; font-weight: 800; font-size: clamp(2rem, 3.6vw + 0.8vh, 4.2rem); letter-spacing: -0.04em; line-height: 0.95; }
 .proj-text dl { margin: 1.2rem 0 0; }
-.proj-text dt { font-family: var(--f-serif); font-style: italic; font-size: 1.25rem; }
+.proj-text dt { font-weight: 300; font-size: 1.25rem; }
 .proj-text dd { margin: 0 0 0.8rem; max-width: 42ch; }
 .proj-note { margin-top: 1.2rem; max-width: 42ch; }
 .btn {
@@ -240,7 +249,7 @@ button { font: inherit; color: inherit; }
   padding: 8% 10%; transform: rotate(-2deg); display: flex; flex-direction: column; gap: 0.6rem;
 }
 .proj-paper .mono { font-size: 0.75rem; opacity: 0.6; }
-.proj-paper-title { font-family: var(--f-serif); font-size: clamp(1.3rem, 2vw, 2rem); line-height: 1.05; margin-top: 1rem; }
+.proj-paper-title { font-weight: 500; font-size: clamp(1.3rem, 2vw, 2rem); line-height: 1.05; margin-top: 1rem; }
 .proj-paper-by { font-family: var(--f-mono); font-size: 0.8rem; }
 .proj-paper-lines { flex: 1; margin-top: 0.8rem; background: repeating-linear-gradient(to bottom, transparent 0 14px, rgba(91, 55, 88, 0.18) 14px 15px); }
 
@@ -257,24 +266,108 @@ button { font: inherit; color: inherit; }
 .proj-tab:hover { transform: translateY(-4px); }
 .proj-tab[aria-selected="true"] { background: var(--gold); transform: translateY(-8px); box-shadow: 0 6px 0 var(--ink); }
 
-/* About */
-.page--about { background: var(--apricot); display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(2rem, 5vw, 5rem); align-items: center; }
+/* About: white with a faint dot grid. Big headline → numbered rows (label left, copy right).
+   The orange only appears as the home page's dot, which swells to cover the screen on the way here and
+   shrinks back into the ball that ends the headline. This page scrolls; the wheel turns to the next page
+   only once you've reached the bottom */
+.page--about {
+  background: #fff radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1px, transparent 1.5px) 0 0 / 36px 36px;
+  padding: 0; color: var(--ink);
+}
+.about-scroll {
+  height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--top) var(--pad) calc(var(--bottom) + 3rem);
+  /* text fades out before it reaches the nav and the pager, instead of sliding under them */
+  mask-image: linear-gradient(transparent 0, #000 calc(var(--top) * 0.85), #000 calc(100% - var(--bottom)), transparent calc(100% - var(--bottom) * 0.35));
+}
+.about-head {
+  font-weight: 500; line-height: 0.98; letter-spacing: -0.045em;
+  max-width: 15ch; text-wrap: balance;
+  font-size: clamp(2.4rem, 5.2vw, 6.4rem);
+}
+.about-head-light { font-weight: 300; }
+/* Hovering a word turns it orange and italic */
+.about-head .hw { pointer-events: auto; transition: color 0.2s; }
+.about-head .hw:hover { color: var(--apricot); font-style: italic; }
+.about-dot {
+  display: inline-block; width: 0.2em; height: 0.2em; margin-left: 0.05em;
+  border-radius: 50%; background: var(--apricot);
+}
+.about-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 1rem 2rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  padding-block: 1.4rem 2.6rem;
+}
+.about-top + .about-row { margin-top: clamp(3rem, 10vh, 7rem); }
+/* Poster layout: the board spans the page and the headline sits over its bottom-left corner, where
+   no photos go. The text leads; the photos frame it. */
+.about-top { position: relative; container-type: inline-size; max-width: 1400px; } /* same cap as the board, so the headline scales with it */
+.about-top .about-head {
+  position: absolute; left: 0; top: 24.5cqi; z-index: 4; max-width: 60%; /* starts halfway down the board (it's half as tall as wide) */
+  font-size: 5.9cqi; pointer-events: none;
+}
+
+/* The cut-up headshot: thin boxes with small mono labels, the photo only inside the boxes */
+.portrait { margin: 0.4rem 0 0; padding: 0 0 0 9%; } /* room for the boxes that hang off the left edge */
+.portrait-art { position: relative; }
+.portrait-art canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.portrait-tile {
+  position: absolute; display: flex; flex-direction: column; align-items: flex-start; gap: 0.15em;
+  padding: 5px 6px; margin: 0; background: none; cursor: pointer; text-align: left; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, #fff); margin: -0.5px;
+  font-family: var(--f-mono); font-size: clamp(8px, 0.62vw, 10.5px); line-height: 1.15; letter-spacing: 0.02em;
+  text-transform: uppercase; color: #fff; text-shadow: 0 0 6px rgb(0 0 0 / 0.6);
+}
+.portrait-tile.is-empty { color: var(--ink); text-shadow: none; background: rgb(255 255 255 / 0.7); }
+.portrait-label { font-weight: 600; white-space: nowrap; }
+.portrait-num { opacity: 0.85; }
+.portrait-tile.is-on, .portrait-tile:focus-visible { outline: 2px solid var(--apricot); outline-offset: -2px; z-index: 1; }
+.portrait-cap { margin-top: calc(8% + 0.6rem); /* clears the boxes hanging below the photo */ font-size: 0.8rem; letter-spacing: 0.04em; min-height: 2.6em; color: color-mix(in srgb, var(--ink) 80%, transparent); }
+.portrait-cap span { text-transform: uppercase; color: var(--ink); margin-right: 0.5em; }
+.portrait-hint::before { content: "hover a tile"; }
+@media (hover: none) { .portrait-hint::before { content: "tap a tile"; } }
+.about-label { font-size: 1.15rem; font-weight: 400; letter-spacing: 0; } /* italic reads best in normal case */
+.about-label span { opacity: 0.5; margin-right: 0.6em; }
+.about-body { display: grid; gap: 1rem; max-width: 62ch; font-size: 1.05rem; line-height: 1.6; color: color-mix(in srgb, var(--ink) 82%, transparent); }
+.about-lead { font-size: clamp(1.3rem, 1.6vw, 1.75rem); line-height: 1.3; letter-spacing: -0.015em; color: var(--ink); }
+/* Sign-off: the signature writes itself at the end of the page */
+.signature { display: block; margin: 0; width: auto; } /* a canvas with only the ink: transparent everywhere else */
+/* Sign-off at the end of the page, on the right */
+.about-sig { display: flex; justify-content: flex-end; margin-top: clamp(1.5rem, 5vh, 3rem); }
+.about-sig .signature { height: clamp(5rem, 11vh, 7.5rem); }
+.about-list { list-style: none; margin: 0; padding: 0; gap: 0.35rem; }
+
+/* Pinboard: images tied to my head with thin orange threads that draw themselves in */
+.board { margin: 0; max-width: 1400px; }
+.board-art { position: relative; }
+.board-threads { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+.board-threads path {
+  fill: none; stroke: var(--apricot); stroke-width: 0.11; /* board units: ~1.4px at desktop size */
+  stroke-dasharray: 1; stroke-dashoffset: 1; animation: thread-draw 1.1s cubic-bezier(0.6, 0, 0.3, 1) both;
+  transition: opacity 0.3s, stroke-width 0.3s;
+}
+@keyframes thread-draw { to { stroke-dashoffset: 0; } }
+.has-active .board-threads path { opacity: 0.25; }
+.has-active .board-threads path.is-on { opacity: 1; stroke-width: 0.22; }
+.board-item {
+  position: absolute; z-index: 2; /* pinned over the main photo where they overlap */ padding: 0; margin: 0; border: 0; background: none; cursor: pointer;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12); transition: transform 0.35s var(--ease), opacity 0.3s, box-shadow 0.3s;
+  animation: fade 0.6s var(--ease) both;
+}
+.board-item img { display: block; width: 100%; height: auto; }
+.has-active .board-item { opacity: 0.55; }
+.has-active .board-item.is-on { opacity: 1; transform: scale(1.04); box-shadow: 0 10px 28px rgb(0 0 0 / 0.2); z-index: 3; }
+.board-item:focus-visible { outline: 2px solid var(--apricot); outline-offset: 3px; }
+.board-figure { position: absolute; z-index: 1; pointer-events: none; }
+.board-cap { margin-top: 1rem; font-size: 0.8rem; letter-spacing: 0.04em; min-height: 2.6em; color: color-mix(in srgb, var(--ink) 80%, transparent); }
+.board-cap span { text-transform: uppercase; color: var(--ink); margin-right: 0.5em; }
+.board-hint::before { content: "hover an image"; }
+@media (hover: none) { .board-hint::before { content: "tap an image"; } }
+@media (prefers-reduced-motion: reduce) { .board-threads path, .board-item { animation: none; stroke-dashoffset: 0; } }
+
 .polaroid { margin: 0; background: var(--card); padding: 14px 14px 0; border: 1.5px solid var(--ink); border-radius: 4px; transform: rotate(-3deg); box-shadow: 10px 10px 0 var(--blackberry); max-height: 100%; }
 .polaroid img { border-radius: 2px; max-height: calc(100svh - var(--top) - var(--bottom) - 90px); width: 100%; object-fit: cover; }
-.polaroid figcaption { font-family: var(--f-serif); font-style: italic; font-size: 1.5rem; padding: 10px 4px 12px; }
-.about-copy { display: grid; gap: clamp(1rem, 2.5vh, 1.6rem); align-content: center; }
-.seg { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 999px; padding: 3px; width: max-content; }
-.seg button { border: 0; background: none; padding: 6px 16px; border-radius: 999px; font-weight: 600; cursor: pointer; }
-.seg button[aria-selected="true"] { background: var(--blackberry); color: var(--paper); }
-.about-panel { margin-top: clamp(1rem, 2.5vh, 1.6rem); display: grid; gap: 0.9rem; animation: fade 0.4s var(--ease) both; max-width: 60ch; }
-.about-panel h3 { font-family: var(--f-serif); font-weight: 400; font-style: italic; font-size: 1.5rem; margin-top: 0.3rem; }
-.tags { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.tags li { border: 1.5px solid var(--ink); border-radius: 999px; padding: 3px 12px; font-size: 0.92rem; background: color-mix(in srgb, var(--card) 55%, transparent); }
-.toolkit { grid-template-columns: 1fr 1fr; gap: 1rem 2rem; }
-.toolkit > div:last-child { grid-column: 1 / -1; }
-.creds { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1.5rem; }
-.creds li { font-weight: 600; line-height: 1.3; }
-.creds .mono { display: block; font-weight: 400; font-size: 0.85rem; }
+.polaroid figcaption { font-weight: 300; font-size: 1.5rem; padding: 10px 4px 12px; }
 
 /* Contact */
 .page--contact { background: var(--gold); display: flex; flex-direction: column; justify-content: center; gap: clamp(1rem, 3vh, 2rem); padding-inline: clamp(20px, 8vw, 140px); }
@@ -292,7 +385,9 @@ button { font: inherit; color: inherit; }
   html, body { height: auto; }
   body { overflow: auto; position: relative; min-height: 100svh; }
   .page { height: auto; min-height: 100svh; overflow: visible; }
-  .work, .proj-stage, .page--about { grid-template-columns: 1fr; }
+  .work, .proj-stage, .about-row, .about-top { grid-template-columns: 1fr; }
+  .board { max-width: 520px; }
+  .about-top .about-head { position: static; max-width: none; margin-bottom: 1.5rem; }
   .proj { height: auto; }
   .proj-tabs { flex-wrap: wrap; }
   .proj-tabs li { flex: 1 1 40%; }
@@ -306,7 +401,9 @@ button { font: inherit; color: inherit; }
 
 /* Phones held upright: the home screen stays one screen, with the name stacked above and below the bouquet */
 @media (max-width: 860px) and (orientation: portrait) {
-  .page--home { height: 100svh; min-height: 0; overflow: hidden; padding-top: calc(var(--top) * 0.85); }
+  .page--home { height: 100svh; min-height: 0; overflow: hidden; padding-top: calc(var(--top) * 0.85); padding-bottom: calc(var(--bottom) + 2rem); } /* room for the location under Jiang */
   .home-bouquet { height: 56%; }
   .home-hint { display: none; }
+  /* Stacked: the location sits centered under "Jiang" */
+  .home-cap { left: 50%; right: auto; translate: calc(-50% + 0.08em) 0; margin-right: 0; text-align: center; top: calc(100% + 0.6rem); }
 }

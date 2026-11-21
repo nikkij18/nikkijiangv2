@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Instrument_Serif, Cutive_Mono, Geist } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import Hud from "@/components/Hud";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display", axes: ["opsz", "wdth"] });
-const serif = Instrument_Serif({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-serif" });
-const simple = Geist({ subsets: ["latin", "latin-ext"], weight: "500", variable: "--font-simple" }); // latin-ext: dotless ı in the home name
-const mono = Cutive_Mono({ weight: "400", subsets: ["latin"], variable: "--font-mono" });
+// One family across the whole site: Geist for everything, Geist Mono for small labels
+const sans = Geist({ subsets: ["latin", "latin-ext"], style: ["normal", "italic"], variable: "--font-sans" }); // latin-ext: dotless ı in the home name
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nikkijiang.com"),
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${serif.variable} ${mono.variable} ${simple.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body suppressHydrationWarning>
         <a className="skip" href="#main">Skip to content</a>
         <Hud />

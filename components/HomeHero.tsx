@@ -162,6 +162,7 @@ export default function HomeHero() {
         set(n, "--b-over", bApart + over);
         set(n, "--a-back", aApart + back);
         set(n, "--b-back", bApart - back);
+        set(n, "--cap-in", wb - bR); // the location lines up with the ink of the "g", not the box edge
       }
 
       // The square standing in for the dot of the "ı" in Jiang: an exact copy of the font's own i-dot
@@ -224,10 +225,35 @@ export default function HomeHero() {
         document.documentElement.dataset.arrive = "dot"; // About appears in place, without its usual wipe
         router.push("/about");
         const started = performance.now();
-        const reveal = () => {
-          if (!document.querySelector(".page--about") && performance.now() - started < 4000) return requestAnimationFrame(reveal);
-          cover.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 450, easing: "ease-out", fill: "forwards" }).onfinish = () => cover.remove();
-          setTimeout(() => delete document.documentElement.dataset.arrive, 1200);
+        const done = () => {
+          cover.remove();
+          delete document.documentElement.dataset.arrive;
+        };
+        // Once About is on screen, the orange shrinks back down into the ball that ends its statement
+        const reveal = async () => {
+          const target = document.querySelector<HTMLElement>(".about-dot");
+          if (!target) {
+            if (performance.now() - started < 4000) return requestAnimationFrame(reveal);
+            return cover.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 450, fill: "forwards" }).finished.then(done);
+          }
+          await document.fonts?.ready; // the statement sizes itself to fit; wait for its final layout
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const t = target.getBoundingClientRect();
+          const tx = t.left + t.width / 2, ty = t.top + t.height / 2, tr = t.width / 2;
+          const far = Math.max(Math.hypot(tx, ty), Math.hypot(innerWidth - tx, ty), Math.hypot(tx, innerHeight - ty), Math.hypot(innerWidth - tx, innerHeight - ty));
+          const to = `at ${tx}px ${ty}px`;
+          target.style.visibility = "hidden";
+          const shrink = cover.animate(
+            [
+              { clipPath: `ellipse(${far + 4}px ${far + 4}px ${to})`, easing: "cubic-bezier(0.7, 0, 0.3, 1)" },
+              { clipPath: `ellipse(${tr * 0.8}px ${tr * 1.25}px ${to})`, offset: 0.86, easing: "cubic-bezier(0.3, 1.6, 0.6, 1)" }, // lands a touch squashed
+              { clipPath: `ellipse(${tr}px ${tr}px ${to})` },
+            ],
+            { duration: 1100, fill: "forwards" },
+          );
+          await shrink.finished;
+          target.style.visibility = "";
+          done();
         };
         requestAnimationFrame(reveal);
       };
@@ -251,8 +277,10 @@ export default function HomeHero() {
           <span ref={edgeB}>J</span>
           <span ref={dotless}>ı</span>an<span ref={endB}>g</span>
           <span ref={dot} className="name-dot" />
+          <span className="home-cap">Based in Washington D.C. &amp; New York</span>
         </span>
       </h1>
+      <p className="sr-only">Based in Washington D.C. and New York.</p>
       <div ref={canvas} className="home-stage">
         <Bouquet3D className="home-bouquet" onReach={onReach} />
       </div>

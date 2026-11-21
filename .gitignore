@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Trial fonts: licensed for local testing only, never commit or deploy
+/app/fonts/*Trial*

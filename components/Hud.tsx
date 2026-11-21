@@ -37,19 +37,34 @@ export default function Hud() {
       router.push(next.href);
     };
 
-    const scrollable = (el: EventTarget | null) => {
+    // Is there something under `el` that can still scroll in this direction? Then let it scroll.
+    let lastScroll = 0;
+    const scrollable = (el: EventTarget | null, dir: number) => {
       let n = el as HTMLElement | null;
       while (n && n !== document.body) {
-        if (n.scrollHeight > n.clientHeight + 2 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) return true;
+        if (n.scrollHeight > n.clientHeight + 2 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) {
+          const room = dir > 0 ? n.scrollHeight - n.clientHeight - n.scrollTop : n.scrollTop;
+          if (room > 2) return true;
+        }
         n = n.parentElement;
       }
       return false;
     };
+    const page = () => document.querySelector<HTMLElement>("[data-scroll]") ?? document.getElementById("main"); // a long page marks its scroller
 
     const onWheel = (e: WheelEvent) => {
       // On small screens the page scrolls normally; only flip pages when the screen fits.
       if (document.documentElement.scrollHeight > window.innerHeight + 2) return;
-      if (scrollable(e.target)) return;
+      if (scrollable(e.target, e.deltaY)) {
+        lastScroll = Date.now();
+        acc.current = 0;
+        return;
+      }
+      // A page that scrolls turns over only once you've reached its end, and not on the same flick
+      if (Date.now() - lastScroll < 500) {
+        lastScroll = Date.now();
+        return;
+      }
       if (Date.now() < lock.current) return;
       acc.current += e.deltaY;
       if (Math.abs(acc.current) > 60) go(acc.current > 0 ? 1 : -1);
@@ -58,8 +73,16 @@ export default function Hud() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t && /input|textarea|select/i.test(t.tagName)) return;
-      if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); go(1); }
-      if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); go(-1); }
+      const dir = e.key === "ArrowDown" || e.key === "PageDown" ? 1 : e.key === "ArrowUp" || e.key === "PageUp" ? -1 : 0;
+      if (!dir) return;
+      e.preventDefault();
+      const p = page();
+      if (p && scrollable(p, dir)) {
+        // A long page scrolls with the keys first
+        p.scrollBy({ top: dir * (e.key.startsWith("Page") ? p.clientHeight * 0.85 : 90), behavior: "smooth" });
+        return;
+      }
+      go(dir);
     };
 
     // Touch: on a screen that doesn't scroll (like Home on a phone), swipe up/down to change pages.
